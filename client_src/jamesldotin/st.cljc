@@ -3,15 +3,15 @@
             [clojure.test :as test]
             [instaparse.core :as insta]))
 
-(def ast-parser (insta/parser "
-space = <'('> (token | time)? (<' '> (token | time))* <')'>;
-time = <'('> (token | space)? (<' '> (token | space))* <')'>;
-token = #'[a-z0-9]+';
-"))
-
 (defn variadic [f]
   (fn [& args]
     (f args)))
+
+(def ast-parser (insta/parser "
+space = <'('> (atom | time)? (<' '> (atom | time))* <')'>;
+time = <'('> (atom | space)? (<' '> (atom | space))* <')'>;
+atom = #'[a-zA-Z0-9]+';
+"))
 
 (defn token-repeat [token]
   (if (sequential? token)
@@ -30,13 +30,51 @@ token = #'[a-z0-9]+';
 
 (defn compile-ast [ast]
   (let [[type & children] ast]
+    (if (empty? children)
+      ""
+      (case type
+        :atom (first children)
+        :space (st-flatten-1 (map compile-ast children))
+        :time (flatten (map compile-ast children))))))
+
+(defn transform-special [s]
+  (-> s
+      (str/replace "[" "((")
+      (str/replace "]" "))")))
+
+(def macro-parser (insta/parser "
+form = macro? <'('> token? (<' '> token)* <')'>;
+<token> = (atom | form);
+macro = #'[a-z]+' (<'^'> #'[:\"a-z0-9]+')*;
+atom = #'[a-zA-Z0-9]+';
+"))
+
+(defn expand-form [children]
+  (let [[h & t] children
+        new-children (if (or (fn? h) (var? h)) (h t) children)]
+    new-children))
+
+(defn expand-macro-ast [macro-ast macro-lookup]
+  (let [[type & children] macro-ast]
     (case type
-      :token (first children)
-      :space (st-flatten-1 (map compile-ast children))
-      :time (flatten (map compile-ast children)))))
+      :macro (apply partial
+                    (macro-lookup (symbol (first children)))
+                    (map read-string (rest children)))
+      :atom (first children)
+      :form (expand-form (map #(expand-macro-ast % macro-lookup) children)))))
+
+(defn macroexpand [s]
+  (-> s
+      transform-special
+      macro-parser
+      (expand-macro-ast (ns-interns 'jamesldotin.st-macros))
+      print-str))
 
 (defn compile [s]
-  (-> s ast-parser compile-ast))
+  (-> s
+      macroexpand
+      ast-parser
+      compile-ast))
 
 ;; TESTS
 
@@ -50,10 +88,10 @@ token = #'[a-z0-9]+';
   (test/is (= (st-flatten [["a" "b"] ["c" "d"]]) ["a c" "b d"])))
 
 (test/deftest compile-ast-tests
-  (test/is (= (compile-ast [:token "a"]) "a"))
-  (test/is (= (compile-ast [:space [:token "a"] [:token "b"]]) "a b"))
-  (test/is (= (compile-ast [:time [:token "a"] [:token "b"]]) ["a" "b"]))
-  (test/is (= (compile-ast [:space [:token "a"] [:time [:token "b"] [:token "c"]]]) ["a b" "a c"])))
+  (test/is (= (compile-ast [:atom "a"]) "a"))
+  (test/is (= (compile-ast [:space [:atom "a"] [:atom "b"]]) "a b"))
+  (test/is (= (compile-ast [:time [:atom "a"] [:atom "b"]]) ["a" "b"]))
+  (test/is (= (compile-ast [:space [:atom "a"] [:time [:atom "b"] [:atom "c"]]]) ["a b" "a c"])))
 
 (test/deftest compile-tests
   (test/is (= (compile "(a b)") "a b"))
