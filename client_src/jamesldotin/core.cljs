@@ -1,66 +1,50 @@
 (ns jamesldotin.core
   (:require [datascript.core :as d]
             [jamesldotin.db :as db]
+            [jamesldotin.dialog :as dialog]
+            [jamesldotin.keyboard :as kbd]
+            [jamesldotin.map :as map]
             [rum.core :as rum]))
 
 (enable-console-print!)
 
 (def *db (db/create-db))
+(def *cursor-pos (atom nil))
 
-(defn parse-key [event]
-  (let [keycode (.-which event)]
-    ({37 :left
-      38 :up
-      39 :right
-      40 :down} keycode)))
+(def spawn! (dialog/whisp-spawner *db [0 0] 2000))
 
-(defn do-key! [key]
-  #_(case key
-    :left (d/transact! *db [[:db.fn/call nudge 1 [-1 0]]])
-    :up (d/transact! *db [[:db.fn/call nudge 1 [0 -1]]])
-    :right (d/transact! *db [[:db.fn/call nudge 1 [1 0]]])
-    :down (d/transact! *db [[:db.fn/call nudge 1 [0 1]]])
-    (println "nevermind then")))
+(defmulti do-action! first)
 
-(def tile-width 30)
-(defn screen-coords [pos]
-  (->> pos
-       (map #(* % tile-width))
-       (map #(str % "px"))))
+(defmethod do-action! :default
+  [_]
+  (println "unhandled action!"))
 
-(defn show-description [eid]
-  (js/alert eid))
+(defmethod do-action! :nudge-player
+  [[_ d]]
+  (db/nudge-player! *db d))
 
-(rum/defc tile [eid pos child]
-  (let [[left top] (screen-coords pos)]
-    [:div.tile
-     {:style {:left left
-              :top top}
-      :on-mouse-enter (partial show-description eid)}
-     child]))
-
-(defn tiles [db]
-  (for [[e x y c] (db/get-tiles db)]
-    (tile e [x y] [:div.char c])))
-
-(rum/defc container [db]
-  [:div#container
-   (tiles db)])
-
-(rum/defc root [db]
-  (container db))
+(defmethod do-action! :whisper
+  [[_ c]]
+  (spawn! c))
 
 (defn mount! [db]
-  (rum/mount (root db) js/document.body))
+  (rum/mount (map/root db) (js/document.getElementById "app")))
 
 ;; just mount everytime db changes!
 (mount! @*db)
 (add-watch *db ::db-watch (fn [_] (mount! @*db)))
 
+(defn parse-location [e]
+  (->> [(.-clientX e) (.-clientY e)]
+       (map #(quot % 20))))
+
 ;; listen for keyboard events!
-(def keydown-handler (comp do-key! parse-key))
+(def keydown-handler (comp do-action! kbd/parse-action))
+
+(def mousemove-handler (comp (partial reset! *cursor-pos) parse-location))
+
+(.addEventListener js/window "mousemove" mousemove-handler)
 (.addEventListener js/window "keydown" keydown-handler)
 (defn on-js-reload []
+  (.removeEventListener js/window "mousemove" mousemove-handler)
   (.removeEventListener js/window "keydown" keydown-handler))
-
-;; TESTING

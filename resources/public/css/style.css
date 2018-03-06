@@ -1,20 +1,21 @@
 html {
     height: 100%;
-    color: black;
-    background-color: white;
+    color: #eee;
+    background-color: black;
 }
 
 .tile {
+    background-color: black;
     position: absolute;
-    width: 30px;
-    height: 30px;
+    width: 20px;
+    height: 20px;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
 #player {
-    background-color: #def;
+    background-color: #111;
 }
 
 .char {

@@ -16,7 +16,8 @@
                  [compojure "1.6.0"]
                  [jarohen/chord "0.8.1"]
                  [datascript "0.16.3"]
-                 [digest "1.4.6"]]
+                 [digest "1.4.6"]
+                 [instaparse "1.4.8"]]
 
   :plugins [[lein-figwheel "0.5.14"]
             [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]]
