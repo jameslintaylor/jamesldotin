@@ -1,4 +1,5 @@
-(ns jamesldotin.st
+(ns jamesldotin.spacetext
+  (:refer-clojure :exclude [macroexpand compile])
   (:require [clojure.string :as str]
             [clojure.test :as test]
             [instaparse.core :as insta]))
@@ -6,6 +7,39 @@
 (defn variadic [f]
   (fn [& args]
     (f args)))
+
+(defn transform-special [s]
+  (-> s
+      (str/replace "[" "((")
+      (str/replace "]" "))")))
+
+(def macro-parser (insta/parser "
+form = macro? <'('> token? (<' '> token)* <')'>;
+<token> = (atom | form);
+macro = #'[a-z]+' (<'^'> #'[:\"a-z0-9]+')*;
+atom = #'[a-zA-Z0-9]+';
+"))
+
+(defn expand-form [children]
+  (let [[h & t] children
+        new-children (if (or (fn? h) (var? h)) (h t) children)]
+    new-children))
+
+(defn expand-macro-ast [macro-ast macro-lookup]
+  (let [[type & children] macro-ast]
+    (case type
+      :macro (let [[macro-name & args] (map read-string children)
+                   macro (macro-lookup macro-name)]
+               (apply partial macro args))
+      :atom (first children)
+      :form (expand-form (map #(expand-macro-ast % macro-lookup) children)))))
+
+(defn macroexpand [s]
+  (-> s
+      transform-special
+      macro-parser
+      (expand-macro-ast (ns-interns 'jamesldotin.st-macros))
+      print-str))
 
 (def ast-parser (insta/parser "
 space = <'('> (atom | time)? (<' '> (atom | time))* <')'>;
@@ -36,39 +70,6 @@ atom = #'[a-zA-Z0-9]+';
         :atom (first children)
         :space (st-flatten-1 (map compile-ast children))
         :time (flatten (map compile-ast children))))))
-
-(defn transform-special [s]
-  (-> s
-      (str/replace "[" "((")
-      (str/replace "]" "))")))
-
-(def macro-parser (insta/parser "
-form = macro? <'('> token? (<' '> token)* <')'>;
-<token> = (atom | form);
-macro = #'[a-z]+' (<'^'> #'[:\"a-z0-9]+')*;
-atom = #'[a-zA-Z0-9]+';
-"))
-
-(defn expand-form [children]
-  (let [[h & t] children
-        new-children (if (or (fn? h) (var? h)) (h t) children)]
-    new-children))
-
-(defn expand-macro-ast [macro-ast macro-lookup]
-  (let [[type & children] macro-ast]
-    (case type
-      :macro (apply partial
-                    (macro-lookup (symbol (first children)))
-                    (map read-string (rest children)))
-      :atom (first children)
-      :form (expand-form (map #(expand-macro-ast % macro-lookup) children)))))
-
-(defn macroexpand [s]
-  (-> s
-      transform-special
-      macro-parser
-      (expand-macro-ast (ns-interns 'jamesldotin.st-macros))
-      print-str))
 
 (defn compile [s]
   (-> s
