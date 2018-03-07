@@ -2,6 +2,80 @@ html {
     height: 100%;
     color: #eee;
     background-color: black;
+    font-family: 'VT323', monospace;
+    font-size: 25px;
+}
+
+#page-container {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    bottom: 0px;
+}
+
+.bg {
+    /* The image used */
+    background-image: url("../stars.jpg");
+
+    /* Full height */
+    height: 100%;
+
+    /* Center and scale the image nicely */
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.row-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#banner {
+    white-space: pre;
+    font-size: 15px;
+}
+
+#input-container {
+    cursor: pointer;
+    border-style: solid;
+    border-radius: 3px;
+    border-width: 2px;
+    padding: 2px;
+    margin-top: 10px;
+}
+
+#input-container:hover {
+    background-color: rgba(255, 255, 255, 10%);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 60%);
+}
+
+#spacetext-input {
+    font-family: 'VT323', monospace;
+    font-size: 25px;
+    color: white;
+    background: none;
+    border: none;
+    height: 25px;
+}
+
+#spacetext-input:focus {
+    outline: none;
+}
+
+#display-area {
+    font-size: 50px;
+    margin-top: 20px;
+}
+
+footer {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    text-align: center;
+    color: #456;
 }
 
 .tile {

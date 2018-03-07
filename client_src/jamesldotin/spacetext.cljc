@@ -17,18 +17,23 @@
 form = macro? <'('> token? (<' '> token)* <')'>;
 <token> = (atom | form);
 macro = #'[a-z]+' (<'^'> #'[:\"a-z0-9]+')*;
-atom = #'[a-zA-Z0-9]+';
+atom = #'[\\'a-zA-Z0-9]+';
 "))
 
 (defn expand-form [children]
-  (let [[h & t] children
-        new-children (if (or (fn? h) (var? h)) (h t) children)]
-    new-children))
+  (let [[h & t] children]
+    (if (or (fn? h) (var? h))
+      (h t)
+      children)))
+
+
+(def -read-str #?(:clj read-string
+                  :cljs cljs.tools.reader.edn/read-string))
 
 (defn expand-macro-ast [macro-ast macro-lookup]
   (let [[type & children] macro-ast]
     (case type
-      :macro (let [[macro-name & args] (map read-string children)
+      :macro (let [[macro-name & args] (map -read-str children)
                    macro (macro-lookup macro-name)]
                (apply partial macro args))
       :atom (first children)
@@ -44,7 +49,7 @@ atom = #'[a-zA-Z0-9]+';
 (def ast-parser (insta/parser "
 space = <'('> (atom | time)? (<' '> (atom | time))* <')'>;
 time = <'('> (atom | space)? (<' '> (atom | space))* <')'>;
-atom = #'[a-zA-Z0-9]+';
+atom = #'[\\'a-zA-Z0-9]+';
 "))
 
 (defn token-repeat [token]
@@ -72,10 +77,13 @@ atom = #'[a-zA-Z0-9]+';
         :time (flatten (map compile-ast children))))))
 
 (defn compile [s]
-  (-> s
-      macroexpand
-      ast-parser
-      compile-ast))
+  (try 
+    (-> s
+        macroexpand
+        ast-parser
+        compile-ast)
+    #?(:cljs (catch js/Error e
+               false))))
 
 ;; TESTS
 
@@ -84,9 +92,9 @@ atom = #'[a-zA-Z0-9]+';
   (test/is (= (take 3 (token-repeat ["a" "b"])) ["a" "b" ""])))
 
 (test/deftest st-flatten-1-tests
-  (test/is (= (st-flatten ["a" "b" "c"]) "a b c"))
-  (test/is (= (st-flatten ["a" ["b" "c"]]) ["a b" "a c"]))
-  (test/is (= (st-flatten [["a" "b"] ["c" "d"]]) ["a c" "b d"])))
+  (test/is (= (st-flatten-1 ["a" "b" "c"]) "a b c"))
+  (test/is (= (st-flatten-1 ["a" ["b" "c"]]) ["a b" "a c"]))
+  (test/is (= (st-flatten-1 [["a" "b"] ["c" "d"]]) ["a c" "b d"])))
 
 (test/deftest compile-ast-tests
   (test/is (= (compile-ast [:atom "a"]) "a"))
