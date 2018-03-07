@@ -14,8 +14,9 @@
       (str/replace "]" "))")))
 
 (def macro-parser (insta/parser "
-form = macro? <'('> token? (<' '> token)* <')'>;
+form = macro-pipe? <'('> token? (<' '> token)* <')'>;
 <token> = (atom | form);
+macro-pipe = macro (<'.'> macro)*;
 macro = #'[a-z]+' (<'^'> #'[:\"a-z0-9]+')*;
 atom = #'[\\'a-zA-Z0-9]+';
 "))
@@ -36,6 +37,7 @@ atom = #'[\\'a-zA-Z0-9]+';
       :macro (let [[macro-name & args] (map -read-str children)
                    macro (macro-lookup macro-name)]
                (apply partial macro args))
+      :macro-pipe (apply comp (map #(expand-macro-ast % macro-lookup) children))
       :atom (first children)
       :form (expand-form (map #(expand-macro-ast % macro-lookup) children)))))
 
