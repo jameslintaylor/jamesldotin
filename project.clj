@@ -19,7 +19,7 @@
                  [digest "1.4.6"]
                  [instaparse "1.4.8"]]
 
-  :plugins [[lein-figwheel "0.5.14"]
+  :plugins [[lein-figwheel "0.5.15"]
             [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]]
 
   :source-paths ["client_src"]
