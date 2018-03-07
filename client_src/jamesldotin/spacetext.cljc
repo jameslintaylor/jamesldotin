@@ -14,10 +14,10 @@
       (str/replace "]" "))")))
 
 (def macro-parser (insta/parser "
-form = macro-pipe? <'('> token? (<' '> token)* <')'>;
+form = <'('> macro-pipe? token? (<' '> token)* <')'>;
 <token> = (atom | form);
-macro-pipe = macro (<'.'> macro)*;
-macro = #'[a-z]+' (<'^'> #'[:\"a-z0-9]+')*;
+macro-pipe = (macro <' << '>)+;
+macro = #'[a-z]+' (<' '> #'[:\"a-z0-9]+')*;
 atom = #'[\\'a-zA-Z0-9]+';
 "))
 

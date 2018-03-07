@@ -6,8 +6,9 @@
             [jamesldotin.map :as map]
             [jamesldotin.spacetext :as st]
             [jamesldotin.st-macros]
-            [jamesldotin.util :include-macros true :refer [slurp]]
-            [rum.core :as rum]))
+            [jamesldotin.util :as util :include-macros true :refer [slurp]]
+            [rum.core :as rum]
+            [clojure.string :as str]))
 
 (enable-console-print!)
 
@@ -30,7 +31,7 @@
   [[_ c]]
   (spawn! c))
 
-(def *text (atom ""))
+(def *text (atom "(cool beans)"))
 (def *compiled (rum/derived-atom [*text] ::compiler
                  (fn [text]
                    (let [compiled (st/compile text)]
@@ -38,17 +39,24 @@
                        (into [] compiled)
                        compiled)))))
 
-(rum/defc spacetext-input []
-  [:input#spacetext-input
-   {:content-editable true
-    :on-change (fn [e]
-                 (->> (.. e -currentTarget -value)
-                      (reset! *text)))}])
+;; why am I making paredit in a text input
+(rum/defcs spacetext-input <
+  rum/reactive
+  (rum/local false ::*shifted)
+  (rum/local "" ::*auto-insert)
+  (rum/local 0 ::*auto-delete)
+  [state]
+  (let [{::keys [*shifted *auto-insert *auto-delete]} state
+        text (rum/react *text)]
+    [:input#spacetext-input
+     (merge {:value @*text
+             :on-change (fn [e] (reset! *text (.. e -currentTarget -value)))}
+            (util/paredit-listeners *shifted *auto-insert *auto-delete))]))
 
 (rum/defcs spacetext-input-container < rum/reactive
   []
   (let [compiled (rum/react *compiled)]
-    [:div#input-container
+    [:div#spacetext-input-container
      {:style {:border-color (if compiled "#465" "#854")}
       :on-click (fn [] (.focus (js/document.getElementById "spacetext-input")))}
      (spacetext-input)]))

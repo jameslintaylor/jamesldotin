@@ -1,6 +1,6 @@
 html {
     height: 100%;
-    color: #eee;
+    color: #adf;
     background-color: black;
     font-family: 'VT323', monospace;
     font-size: 25px;
@@ -37,27 +37,31 @@ html {
     font-size: 15px;
 }
 
-#input-container {
+#spacetext-input-container {
     cursor: pointer;
     border-style: solid;
     border-radius: 3px;
     border-width: 2px;
     padding: 2px;
     margin-top: 10px;
+    width: 80%;
+    background-color: #222;
 }
 
-#input-container:hover {
-    background-color: rgba(255, 255, 255, 10%);
+#spacetext-input-container:hover {
+    background-color: #333;
     box-shadow: 0 0 10px rgba(255, 255, 255, 60%);
 }
 
 #spacetext-input {
     font-family: 'VT323', monospace;
     font-size: 25px;
-    color: white;
+    text-align: center;
     background: none;
+    color: #def;
     border: none;
     height: 25px;
+    width: 100%;
 }
 
 #spacetext-input:focus {
